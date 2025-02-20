@@ -1,10 +1,11 @@
-use crate::hass_mqtt::{DiscoverSensor};
+use crate::hass_mqtt::{ DeviceClass, DiscoverDevice, DiscoverSensor};
 use anyhow::{Result};
 use rumqttc::{AsyncClient, Client, MqttOptions, QoS};
 use std::env;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::{task, time};
+use crate::fimer::Device;
 
 mod fimer;
 mod hass_mqtt;
@@ -17,7 +18,7 @@ async fn main() -> Result<()> {
   let port:u16 = env::var("MQTT_PORT").unwrap_or(String::from("1883")).parse()?;
   let auth: (String, String) = (env::var("MQTT_USERNAME").expect("MQTT_USER should be set"), env::var("MQTT_PASSWORD").expect("MQTT_PASSWORD is not set").to_string());
 
-  let mut mqttoptions = MqttOptions::new("fimer-mqtt", host, port);
+  let mut mqttoptions = MqttOptions::new("fimer-mqftt", host, port);
   mqttoptions.set_keep_alive(Duration::from_secs(5));
   mqttoptions.set_credentials(auth.0, auth.1);
 
@@ -32,6 +33,9 @@ async fn main() -> Result<()> {
 
       let client = Arc::clone(&clnt);
       task::spawn(async move {
+        let device_msg = DiscoverDevice::new( first.points.clone());
+       let dbg =  serde_json::to_string(&device_msg).unwrap();
+        // let _test = client.publish(format!("homeassistant/device/{name}/config", name = "remif"), QoS::AtLeastOnce, false, dbg.as_bytes()).await;
         loop {
           let data = first.points.iter().map(|point| DiscoverSensor::new(point.into()));
           for i in data {
